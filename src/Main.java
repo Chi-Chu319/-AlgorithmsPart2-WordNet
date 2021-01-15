@@ -6,8 +6,8 @@ public class Main {
 
     public static void main(String[] args) {
 	// write your code here
-        Hashtable<Integer, Integer> h = new Hashtable<>();
-        h.put(20, 12);
-        System.out.println(h.contains(12));
+        int[][] parents = new int[20][2];
+        System.out.println(parents.length);
+        for (int i = 0; i<parents.length; i++) parents[i][0] = -1;
     }
 }
