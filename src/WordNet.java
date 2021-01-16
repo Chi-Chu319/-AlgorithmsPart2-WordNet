@@ -1,93 +1,107 @@
+import edu.princeton.cs.algs4.Digraph;
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
-import java.util.ArrayList;
+
+import java.util.Collections;
 import java.util.Hashtable;
-import java.util.LinkedList;
 
 
 public class WordNet {
+    /*
+    * The wordNet is a rooted graph which means
+    * given two vertex in the wordNet, there must be an common ancestor for both.
+    * as every vertex in the graph is guaranteed to have a parent and all are children to the root,
+    * except for the root.
+    * */
     // Dynamic array of set of strings
     private Hashtable<String, Integer> lookup;
-    private ArrayList<String> strings;
-    private ArrayList<String[]> synsets;
-    private ArrayList<String> glossary;
-    private ArrayList<LinkedList<Integer>> hypernyms;
+    private Hashtable<Integer, String> lookupNoun;
+    private final Digraph G;
 
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms){
         if (synsets == null || hypernyms == null) throw new IllegalArgumentException();
         this.lookup = new Hashtable<>();
-        this.synsets = new ArrayList<>(1);
-        this.glossary = new ArrayList<>(1);
-        this.strings = new ArrayList<>();
-        int length = 0;
+        this.lookupNoun = new Hashtable<>();
+        int V = 0;
 
         In in = new In(synsets);
         while (!in.isEmpty()){
-            length ++;
             String[] data = in.readLine().split(",");
             int idx = Integer.parseInt(data[0]);
-            for (String s : data[1].split(" ")){this.lookup.put(s, idx); this.strings.add(s);}
-            this.synsets.add(data[1].split(" "));
-            this.glossary.add(data[2]);
+            for (String s : data[1].split(" ")){this.lookup.put(s, idx);}
+            this.lookupNoun.put(idx, data[1]);
+            V++;
         }
 
-        this.hypernyms = new ArrayList<>(length);
-
+        G = new Digraph(V);
         in = new In(hypernyms);
 
         while (!in.isEmpty()) {
             String[] data = in.readLine().split(",");
-            int idx = Integer.parseInt(data[0]);
-            LinkedList<Integer> hypernym = new LinkedList<>();
-            for(int i = 1; i < data.length;i++){
-                hypernym.add(Integer.parseInt(data[i]));
+            int v = Integer.parseInt(data[0]);
+            for(int i = 1; i < data.length ;i++){
+                int w = Integer.parseInt(data[i]);
+                G.addEdge(v, w);
             }
-            this.hypernyms.set(idx, hypernym);
         }
-
+        // todo make sure the graph is rooted.
     }
 
     // returns all WordNet nouns
     public Iterable<String> nouns(){
-        return strings;
+        return Collections.list(lookup.keys());
     }
 
     // is the word a WordNet noun?
     public boolean isNoun(String word){
+        if (word == null) throw new IllegalArgumentException();
         return lookup.containsKey(word);
     }
 
     // distance between nounA and nounB (defined below)
     public int distance(String nounA, String nounB){
-        if (nounA.equals(nounB)) return 0;
-        int v = lookup.get(nounA);
-        int w = lookup.get(nounB);
+        if (nounA == null || nounB == null) throw new IllegalArgumentException();
 
-        int[][] visited = new int[synsets.size()][2];
+        int v = lookup(nounA);
+        int w = lookup(nounB);
+
+        if (w == v) return 0;
+
+        // do a BSF
+        // use array of arrays to store {visited vertex, BFS result from which vertex}
+        int[][] visited = new int[this.G.V()][2];
         visited[v] = new int[]{1, 0};
         visited[w] = new int[]{1, 1};
-
         Queue<int[]> q = new Queue<>();
         q.enqueue(new int[]{v, 0});
         q.enqueue(new int[]{w, 1});
 
-        int[] distTo = new int[synsets.size()];
-        int length = 0;
+        int[] distTo = new int[this.G.V()];
+        int length = Integer.MAX_VALUE;
+        int ancestor = -1;
+        int depth;
 
-        while (!q.isEmpty() && length == 0){
+        boolean found = false;
+
+        while (!q.isEmpty() && !found) {
             int[] vertex = q.dequeue();
-            for (int adj:hypernyms.get(vertex[0]))
-            {
+            depth = distTo[vertex[0]] + 1;
+            for (int adj : this.G.adj(vertex[0])) {
                 // if visited and by BFS result of another queried vertex
-                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]){
-                    length = distTo[adj] + distTo[vertex[0]] + 1;
-                    break;
-                }
-                else if (visited[adj][0] != 1){
+                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
+                    // common ancestor, not guaranteed to have the shortest path
+                    if (distTo[adj] + depth < length) {length = distTo[adj] + depth; ancestor = adj;}
+                    if (length < depth) {// break out of the loop
+                        found = true;
+                    }
+                    // push it to the queue.
+                    q.enqueue(new int[]{adj, vertex[1]});
+                    distTo[adj] = distTo[vertex[0]] + 1;
+                } else if (visited[adj][0] != 1) {
                     // not visited.
                     q.enqueue(new int[]{adj, vertex[1]});
                     visited[adj] = new int[]{1, vertex[1]};
@@ -96,8 +110,6 @@ public class WordNet {
             }
         }
 
-
-        if (length == 0) return -1;
         return length;
     }
 
@@ -105,50 +117,64 @@ public class WordNet {
     // in a shortest ancestral path (defined below)
     public String sap(String nounA, String nounB)
     {
-        if (nounA.equals(nounB)) return nounA;
+        if (nounA ==null || nounB == null) throw new IllegalArgumentException();
 
-        int v;
-        int w;
+        int v = lookup(nounA);
+        int w = lookup(nounB);
 
-        try {
-            v = lookup.get(nounA);
-            w = lookup.get(nounB);
-        } catch (NullPointerException e) {
-            throw new IllegalArgumentException();
-        }
+        if (w == v) return nounA;
 
-
-        int[][] visited = new int[synsets.size()][2];
+        // do a BSF
+        // use array of arrays to store {visited vertex, BFS result from which vertex}
+        int[][] visited = new int[this.G.V()][2];
         visited[v] = new int[]{1, 0};
         visited[w] = new int[]{1, 1};
-
         Queue<int[]> q = new Queue<>();
         q.enqueue(new int[]{v, 0});
         q.enqueue(new int[]{w, 1});
 
+        int[] distTo = new int[this.G.V()];
+        int length = Integer.MAX_VALUE;
+        int ancestor = -1;
+        int depth;
 
-        while (!q.isEmpty()){
+        boolean found = false;
+
+        while (!q.isEmpty() && !found) {
             int[] vertex = q.dequeue();
-            for (int adj:hypernyms.get(vertex[0]))
-            {
+            depth = distTo[vertex[0]] + 1;
+            for (int adj : this.G.adj(vertex[0])) {
                 // if visited and by BFS result of another queried vertex
-                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]){
-                    return String.join(" ", synsets.get(adj));
-                }
-                else if (visited[adj][0] != 1){
+                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
+                    // common ancestor, not guaranteed to have the shortest path
+                    if (distTo[adj] + depth < length) {length = distTo[adj] + depth; ancestor = adj;}
+                    if (length < depth) {// break out of the loop
+                        found = true;
+                    }
+                    // push it to the queue.
+                    q.enqueue(new int[]{adj, vertex[1]});
+                    distTo[adj] = distTo[vertex[0]] + 1;
+                } else if (visited[adj][0] != 1) {
                     // not visited.
                     q.enqueue(new int[]{adj, vertex[1]});
                     visited[adj] = new int[]{1, vertex[1]};
+                    distTo[adj] = distTo[vertex[0]] + 1;
                 }
             }
         }
 
-        return "";
+        return lookup(ancestor);
     }
 
     private int lookup(String noun){
+        if (!lookup.containsKey(noun)) throw  new IllegalArgumentException();
         return lookup.get(noun);
     }
+
+    private String lookup(int idx){
+        return lookupNoun.get(idx);
+    }
+
 
     // do unit testing of this class
     public static void main(String[] args){
