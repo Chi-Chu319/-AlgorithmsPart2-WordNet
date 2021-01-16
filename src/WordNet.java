@@ -3,7 +3,9 @@ import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Hashtable;
+import java.util.LinkedList;
 
 
 public class WordNet {
@@ -12,13 +14,14 @@ public class WordNet {
     private ArrayList<String> strings;
     private ArrayList<String[]> synsets;
     private ArrayList<String> glossary;
-    private LinkedList<Integer>[] hypernyms;
+    private ArrayList<LinkedList<Integer>> hypernyms;
 
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms){
+        if (synsets == null || hypernyms == null) throw new IllegalArgumentException();
         this.lookup = new Hashtable<>();
         this.synsets = new ArrayList<>(1);
-        this.glossary = new ArrayList<String>(1);
+        this.glossary = new ArrayList<>(1);
         this.strings = new ArrayList<>();
         int length = 0;
 
@@ -32,7 +35,7 @@ public class WordNet {
             this.glossary.add(data[2]);
         }
 
-        this.hypernyms = new LinkedList[length];
+        this.hypernyms = new ArrayList<>(length);
 
         in = new In(hypernyms);
 
@@ -43,7 +46,7 @@ public class WordNet {
             for(int i = 1; i < data.length;i++){
                 hypernym.add(Integer.parseInt(data[i]));
             }
-            this.hypernyms[idx] = hypernym;
+            this.hypernyms.set(idx, hypernym);
         }
 
     }
@@ -77,7 +80,7 @@ public class WordNet {
 
         while (!q.isEmpty() && length == 0){
             int[] vertex = q.dequeue();
-            for (int adj:hypernyms[vertex[0]])
+            for (int adj:hypernyms.get(vertex[0]))
             {
                 // if visited and by BFS result of another queried vertex
                 if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]){
@@ -104,8 +107,16 @@ public class WordNet {
     {
         if (nounA.equals(nounB)) return nounA;
 
-        int v = lookup.get(nounA);
-        int w = lookup.get(nounB);
+        int v;
+        int w;
+
+        try {
+            v = lookup.get(nounA);
+            w = lookup.get(nounB);
+        } catch (NullPointerException e) {
+            throw new IllegalArgumentException();
+        }
+
 
         int[][] visited = new int[synsets.size()][2];
         visited[v] = new int[]{1, 0};
@@ -118,7 +129,7 @@ public class WordNet {
 
         while (!q.isEmpty()){
             int[] vertex = q.dequeue();
-            for (int adj:hypernyms[vertex[0]])
+            for (int adj:hypernyms.get(vertex[0]))
             {
                 // if visited and by BFS result of another queried vertex
                 if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]){
@@ -133,6 +144,10 @@ public class WordNet {
         }
 
         return "";
+    }
+
+    private int lookup(String noun){
+        return lookup.get(noun);
     }
 
     // do unit testing of this class
