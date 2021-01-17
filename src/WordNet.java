@@ -1,11 +1,16 @@
+import edu.princeton.cs.algs4.Bag;
 import edu.princeton.cs.algs4.Digraph;
 import edu.princeton.cs.algs4.In;
 import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Hashtable;
+import java.util.Iterator;
+import java.util.Random;
 
 
 public class WordNet {
@@ -16,23 +21,34 @@ public class WordNet {
     * except for the root.
     * */
     // Dynamic array of set of strings
-    private Hashtable<String, Integer> lookup;
-    private Hashtable<Integer, String> lookupNoun;
+    private Hashtable<String, Bag<Integer>> lookup;
+    private ArrayList<String> lookupNoun;
     private final SAP sap;
 
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms){
         if (synsets == null || hypernyms == null) throw new IllegalArgumentException();
         this.lookup = new Hashtable<>();
-        this.lookupNoun = new Hashtable<>();
+        this.lookupNoun = new ArrayList<>();
         int V = 0;
 
         In in = new In(synsets);
         while (!in.isEmpty()){
             String[] data = in.readLine().split(",");
             int idx = Integer.parseInt(data[0]);
-            for (String s : data[1].split(" ")){this.lookup.put(s, idx);}
-            this.lookupNoun.put(idx, data[1]);
+            for (String s : data[1].split(" ")){
+                if (!lookup.containsKey(s)){
+                    Bag<Integer> bag = new Bag<>();
+                    bag.add(idx);
+                    this.lookup.put(s, bag);
+                }
+                else{
+                    Bag<Integer>bag = lookup.get(s);
+                    bag.add(idx);
+                    this.lookup.put(s, bag);
+                }
+            }
+            this.lookupNoun.add(data[1]);
             V++;
         }
 
@@ -47,8 +63,53 @@ public class WordNet {
                 G.addEdge(v, w);
             }
         }
-        this.sap = new SAP(G);
         // todo make sure the graph is rooted.
+        // keep going up using DFS, if encounter a vertex with no incoming edge, then the node is root.
+        boolean isRooted = isRooted(G);
+        if (!isRooted) throw new IllegalArgumentException();
+
+
+        this.sap = new SAP(G);
+    }
+
+    private boolean isRooted(Digraph G){
+        Random rand = new Random();
+        int V = G.V();
+        int vertex = rand.nextInt(V);
+        boolean[] visited = new boolean[V];
+        boolean isRooted = isRootedDFS(G, vertex, visited);
+
+        int rootCount = 0;
+        for (int i = 0; i<V; i++){
+            if (sizeOfIterable(G.adj(i)) == 0)rootCount++;
+        }
+
+        return  (rootCount == 1) && isRooted;
+    }
+
+    private int sizeOfIterable(Iterable<Integer> iterable){
+        if (iterable instanceof Collection) {
+            return ((Collection<?>) iterable).size();
+        } else {
+            int count = 0;
+            for (Integer integer : iterable) {
+                count++;
+            }
+            return count;
+        }
+    }
+
+    private boolean isRootedDFS(Digraph G, int v, boolean[] visited){
+        for(int adj: G.adj(v)){
+            if (!visited[adj]){
+                visited[adj] = true;
+                if (sizeOfIterable(G.adj(adj)) == 0) return true;
+                return isRootedDFS(G, adj, visited);
+            }
+            else {return false; }
+            // not a DAG: cycle exists.
+        }
+        return true;
     }
 
     // returns all WordNet nouns
@@ -66,10 +127,9 @@ public class WordNet {
     public int distance(String nounA, String nounB){
         if (nounA == null || nounB == null) throw new IllegalArgumentException();
 
-        int v = lookup(nounA);
-        int w = lookup(nounB);
+        Iterable<Integer> v = lookup(nounA);
+        Iterable<Integer> w = lookup(nounB);
 
-        if (w == v) return 0;
 
         return sap.length(v,w);
     }
@@ -80,17 +140,16 @@ public class WordNet {
     {
         if (nounA ==null || nounB == null) throw new IllegalArgumentException();
 
-        int v = lookup(nounA);
-        int w = lookup(nounB);
+        Iterable<Integer> v = lookup(nounA);
+        Iterable<Integer> w = lookup(nounB);
 
-        if (w == v) return nounA;
 
         int ancestor = sap.ancestor(v,w);
 
         return lookup(ancestor);
     }
 
-    private int lookup(String noun){
+    private Iterable<Integer> lookup(String noun){
         if (!lookup.containsKey(noun)) throw  new IllegalArgumentException();
         return lookup.get(noun);
     }

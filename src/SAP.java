@@ -43,7 +43,10 @@ public class SAP {
 
     private int lengthByQueue(Queue<int[]> q, int[][] visited){
         // return common ancestor with shortest path by the elements stored in queue
-        int[] distTo = new int[this.G.V()];
+        int[] distTo;
+        int[] distTo_;
+        int[] distTo1 = new int[this.G.V()];
+        int[] distTo2 = new int[this.G.V()];
         // if there is ANY COMMON ANCESTOR. (not guaranteed to be with the shortest path)
         int length = Integer.MAX_VALUE;
         // ANY COMMON ANCESTOR. (not guaranteed to be with the shortest path)
@@ -59,19 +62,17 @@ public class SAP {
 
         while (!q.isEmpty() && !found) {
             int[] vertex = q.dequeue();
-            // problem: how to indicate depth of BFS; distTo[] stored the shortest path to a vertex. but inserting a common ancestor may break the relation.
-            // solution: overwrite the vertex dist if the vertex is found by BFS of another origin
-            // proof of safety:
-            // the solution is safe since the distTo[vertex] is only overwritten if at least one common ancestor is found.
-            // to find a common ancestor with short path. the BFS will repeat the search path done by BFS of another origin.
-            // which is guaranteed to be marked.
-            // cons: depth of the BFS will be always correct.
+            distTo = (vertex[1] == 0) ? distTo1: distTo2;
+            distTo_ = (vertex[1] == 0) ? distTo2: distTo1;
             depth = distTo[vertex[0]] + 1;
             for (int adj : this.G.adj(vertex[0])) {
                 // if visited and by BFS result of another queried vertex
                 if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
                     // common ancestor, not guaranteed to have the shortest path
-                    if (distTo[adj] + depth < length){ length = distTo[adj] + depth; ancestor = adj;}
+                    if (distTo_[adj] + depth < length){
+                        length = distTo_[adj] + depth;
+                        ancestor = adj;
+                    }
                     if (length < depth) {// break out of the loop
                         found = true;
                     }
@@ -94,21 +95,32 @@ public class SAP {
     private int ancestorByQueue(Queue<int[]> q, int[][] visited){
         // return length to common ancestor with shortest path by the elements stored in queue
         // return common ancestor with shortest path by the elements stored in queue
-        int[] distTo = new int[this.G.V()];
+        int[] distTo;
+        int[] distTo_;
+        int[] distTo1 = new int[this.G.V()];
+        int[] distTo2 = new int[this.G.V()];
+        // if there is ANY COMMON ANCESTOR. (not guaranteed to be with the shortest path)
         int length = Integer.MAX_VALUE;
+        // ANY COMMON ANCESTOR. (not guaranteed to be with the shortest path)
         int ancestor = -1;
         int depth;
-
+        // if it's set there is GUARANTEED TO BE A COMMON ANCESTOR WITH SHORTEST PATH
+        // could be not set even the sap is found.
         boolean found = false;
 
         while (!q.isEmpty() && !found) {
             int[] vertex = q.dequeue();
+            distTo = (vertex[1] == 0) ? distTo1: distTo2;
+            distTo_ = (vertex[1] == 0) ? distTo2: distTo1;
             depth = distTo[vertex[0]] + 1;
             for (int adj : this.G.adj(vertex[0])) {
                 // if visited and by BFS result of another queried vertex
                 if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
                     // common ancestor, not guaranteed to have the shortest path
-                    if (distTo[adj] + depth < length) {length = distTo[adj] + depth; ancestor = adj;}
+                    if (distTo_[adj] + depth < length){
+                        length = distTo_[adj] + depth;
+                        ancestor = adj;
+                    }
                     if (length < depth) {// break out of the loop
                         found = true;
                     }
