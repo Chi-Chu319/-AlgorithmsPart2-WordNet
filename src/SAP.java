@@ -187,6 +187,7 @@ public class SAP {
 
     // a common ancestor that participates in shortest ancestral path; -1 if no such path
     public int ancestor(Iterable<Integer> v, Iterable<Integer> w){
+        validateInput(v, w);
 
 
         // do a BSF

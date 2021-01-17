@@ -1,6 +1,5 @@
 import edu.princeton.cs.algs4.Digraph;
 import edu.princeton.cs.algs4.In;
-import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
@@ -19,7 +18,7 @@ public class WordNet {
     // Dynamic array of set of strings
     private Hashtable<String, Integer> lookup;
     private Hashtable<Integer, String> lookupNoun;
-    private final Digraph G;
+    private final SAP sap;
 
     // constructor takes the name of the two input files
     public WordNet(String synsets, String hypernyms){
@@ -37,7 +36,7 @@ public class WordNet {
             V++;
         }
 
-        G = new Digraph(V);
+        Digraph G = new Digraph(V);
         in = new In(hypernyms);
 
         while (!in.isEmpty()) {
@@ -48,6 +47,7 @@ public class WordNet {
                 G.addEdge(v, w);
             }
         }
+        this.sap = new SAP(G);
         // todo make sure the graph is rooted.
     }
 
@@ -71,46 +71,7 @@ public class WordNet {
 
         if (w == v) return 0;
 
-        // do a BSF
-        // use array of arrays to store {visited vertex, BFS result from which vertex}
-        int[][] visited = new int[this.G.V()][2];
-        visited[v] = new int[]{1, 0};
-        visited[w] = new int[]{1, 1};
-        Queue<int[]> q = new Queue<>();
-        q.enqueue(new int[]{v, 0});
-        q.enqueue(new int[]{w, 1});
-
-        int[] distTo = new int[this.G.V()];
-        int length = Integer.MAX_VALUE;
-        int ancestor = -1;
-        int depth;
-
-        boolean found = false;
-
-        while (!q.isEmpty() && !found) {
-            int[] vertex = q.dequeue();
-            depth = distTo[vertex[0]] + 1;
-            for (int adj : this.G.adj(vertex[0])) {
-                // if visited and by BFS result of another queried vertex
-                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
-                    // common ancestor, not guaranteed to have the shortest path
-                    if (distTo[adj] + depth < length) {length = distTo[adj] + depth; ancestor = adj;}
-                    if (length < depth) {// break out of the loop
-                        found = true;
-                    }
-                    // push it to the queue.
-                    q.enqueue(new int[]{adj, vertex[1]});
-                    distTo[adj] = distTo[vertex[0]] + 1;
-                } else if (visited[adj][0] != 1) {
-                    // not visited.
-                    q.enqueue(new int[]{adj, vertex[1]});
-                    visited[adj] = new int[]{1, vertex[1]};
-                    distTo[adj] = distTo[vertex[0]] + 1;
-                }
-            }
-        }
-
-        return length;
+        return sap.length(v,w);
     }
 
     // a synset (second field of synsets.txt) that is the common ancestor of nounA and nounB
@@ -124,44 +85,7 @@ public class WordNet {
 
         if (w == v) return nounA;
 
-        // do a BSF
-        // use array of arrays to store {visited vertex, BFS result from which vertex}
-        int[][] visited = new int[this.G.V()][2];
-        visited[v] = new int[]{1, 0};
-        visited[w] = new int[]{1, 1};
-        Queue<int[]> q = new Queue<>();
-        q.enqueue(new int[]{v, 0});
-        q.enqueue(new int[]{w, 1});
-
-        int[] distTo = new int[this.G.V()];
-        int length = Integer.MAX_VALUE;
-        int ancestor = -1;
-        int depth;
-
-        boolean found = false;
-
-        while (!q.isEmpty() && !found) {
-            int[] vertex = q.dequeue();
-            depth = distTo[vertex[0]] + 1;
-            for (int adj : this.G.adj(vertex[0])) {
-                // if visited and by BFS result of another queried vertex
-                if (visited[adj][0] == 1 && visited[adj][1] != vertex[1]) {
-                    // common ancestor, not guaranteed to have the shortest path
-                    if (distTo[adj] + depth < length) {length = distTo[adj] + depth; ancestor = adj;}
-                    if (length < depth) {// break out of the loop
-                        found = true;
-                    }
-                    // push it to the queue.
-                    q.enqueue(new int[]{adj, vertex[1]});
-                    distTo[adj] = distTo[vertex[0]] + 1;
-                } else if (visited[adj][0] != 1) {
-                    // not visited.
-                    q.enqueue(new int[]{adj, vertex[1]});
-                    visited[adj] = new int[]{1, vertex[1]};
-                    distTo[adj] = distTo[vertex[0]] + 1;
-                }
-            }
-        }
+        int ancestor = sap.ancestor(v,w);
 
         return lookup(ancestor);
     }

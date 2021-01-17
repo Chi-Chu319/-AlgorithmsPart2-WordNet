@@ -12,8 +12,8 @@ public class Outcast {
     // given an array of WordNet nouns, return an outcast
     public String outcast(String[] nouns){
         String result = "";
-        String ancestor = "";
-        int d_max = 0;
+//        String ancestor = "";
+        int dMax = 0;
         int temp;
         int d = 0;
         for(String noun:nouns){
@@ -24,8 +24,8 @@ public class Outcast {
 //                System.out.printf("distance from %s (%d) to %s (%d) is %d, ancestor is %s (%d)\n", noun,
 //                        this.w.lookup(noun), n, this.w.lookup(n), temp, ancestor, this.w.lookup(ancestor.split(" ")[0]));
             }
-            if (d > d_max){
-                d_max = d;
+            if (d > dMax){
+                dMax = d;
                 result = noun;
             }
 //            System.out.printf("noun: %s, distance: %d\n", noun, d);
