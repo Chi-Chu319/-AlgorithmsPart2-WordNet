@@ -5,10 +5,6 @@ import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.stream.Collectors;
-
 public class SAP {
     private final Digraph G;
     private final int V;

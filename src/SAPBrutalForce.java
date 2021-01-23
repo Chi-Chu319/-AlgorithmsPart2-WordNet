@@ -4,8 +4,6 @@ import edu.princeton.cs.algs4.Queue;
 import edu.princeton.cs.algs4.StdIn;
 import edu.princeton.cs.algs4.StdOut;
 
-import javax.xml.crypto.dom.DOMCryptoContext;
-import java.io.FileOutputStream;
 import java.util.Arrays;
 
 public class SAPBrutalForce {
